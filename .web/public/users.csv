@@ -1,0 +1,6 @@
+id,first_name,last_name,email,signup_date,plan
+1,Alice,Nguyen,alice@example.com,2025-01-02,Pro
+2,Bob,Smith,bob@example.com,2025-01-05,Free
+3,Carol,Jones,carol@example.com,2025-02-14,Pro
+4,David,Lee,david@example.com,2025-03-01,Business
+5,Eva,Martinez,eva@example.com,2025-03-22,Free
