@@ -150,3 +150,93 @@ That’s it—your new form follows the same pattern with minimal boilerplate.
 ## License
 
 This sample is provided as-is for learning purposes.
+
+---
+
+## Deploying to Azure App Service
+
+You can deploy this Reflex app to Azure App Service either as:
+
+1. Code deployment (App Service builds from requirements.txt) – simplest, fewer customizations.
+2. Container deployment (using the provided Dockerfile) – consistent runtime & faster cold starts.
+
+### 1. Code Deployment (Linux App Service)
+
+Create the App Service and push code:
+
+```bash
+az group create -n reflex-rg -l eastus
+az appservice plan create -n reflex-plan -g reflex-rg --sku B1 --is-linux
+az webapp create -n reflex-demo-app -g reflex-rg -p reflex-plan --runtime "PYTHON:3.11"
+
+# Configure startup command (Reflex needs to run its server)
+az webapp config set -n reflex-demo-app -g reflex-rg --startup-file "python -m reflex run --env prod"
+
+# Set environment variables if needed
+az webapp config appsettings set -g reflex-rg -n reflex-demo-app --settings REFLEX_ENV=prod
+
+# Deploy code (zip deploy)
+zip -r app.zip sample_reflex rxconfig.py requirements.txt assets README.md
+az webapp deploy --name reflex-demo-app --resource-group reflex-rg --src-path app.zip
+```
+
+Notes:
+- App Service provides `PORT`; Reflex defaults to 3000. If Azure sets a different port, set `PORT` env and use `python -m reflex run --env prod --port $PORT`.
+- Ensure `requirements.txt` includes `reflex` and `pandas`.
+
+### 2. Container Deployment
+
+Build and push the container image to Azure Container Registry (ACR) and deploy:
+
+```bash
+az group create -n reflex-rg -l eastus
+az acr create -n reflexacr123 -g reflex-rg --sku Basic
+az acr login -n reflexacr123
+
+docker build -t reflexacr123.azurecr.io/reflex-demo:latest .
+docker push reflexacr123.azurecr.io/reflex-demo:latest
+
+az appservice plan create -n reflex-plan -g reflex-rg --sku B1 --is-linux
+az webapp create -n reflex-demo-app -g reflex-rg -p reflex-plan \
+    --deployment-container-image-name reflexacr123.azurecr.io/reflex-demo:latest
+
+az webapp config appsettings set -g reflex-rg -n reflex-demo-app --settings REFLEX_ENV=prod
+```
+
+If you later update the image, push a new tag and run:
+```bash
+az webapp config container set -n reflex-demo-app -g reflex-rg \
+    --docker-custom-image-name reflexacr123.azurecr.io/reflex-demo:latest
+az webapp restart -n reflex-demo-app -g reflex-rg
+```
+
+### Logs & Monitoring
+
+```bash
+az webapp log tail -n reflex-demo-app -g reflex-rg
+```
+For deeper tracing or Application Insights, enable:
+```bash
+az monitor app-insights component create -g reflex-rg -l eastus -a reflex-ai
+az webapp config appsettings set -g reflex-rg -n reflex-demo-app --settings APPLICATIONINSIGHTS_CONNECTION_STRING="<conn-string>"
+```
+
+### Scaling
+Upgrade plan SKU or enable autoscale:
+```bash
+az monitor autoscale create -g reflex-rg --resource reflex-plan --resource-type Microsoft.Web/serverfarms \
+    -n reflex-autoscale --min-count 1 --max-count 3 --count 1
+```
+
+### Common Adjustments
+- Custom port: set `PORT` and add `--port $PORT` to startup command.
+- Environment: `REFLEX_ENV=prod` disables dev hot-reload.
+- Persistent storage: place user-upload directories in `/home/site/wwwroot/` if needed.
+
+### Health Probes
+App Service expects your process to bind to the port quickly. Multi-stage Dockerfile reduces image size; if startup is slow, consider warming via an internal request.
+
+### CI/CD Next Steps
+- Add GitHub Action to build & deploy (uses `az webapp deploy` or container build/push).
+- Cache dependencies with `actions/cache` keyed by `requirements.txt` hash.
+
