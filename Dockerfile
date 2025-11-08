@@ -1,6 +1,6 @@
 ## Multi-stage build for Reflex app on Azure App Service (Linux Container)
 # Base builder image
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -18,7 +18,7 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip && pip install -r requirements.txt --prefix /install
 
 # Runtime image
-FROM python:3.11-slim AS runtime
+FROM python:3.13-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 

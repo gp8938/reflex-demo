@@ -181,6 +181,7 @@ az webapp deploy --name reflex-demo-app --resource-group reflex-rg --src-path ap
 ```
 
 Notes:
+
 - App Service provides `PORT`; Reflex defaults to 3000. If Azure sets a different port, set `PORT` env and use `python -m reflex run --env prod --port $PORT`.
 - Ensure `requirements.txt` includes `reflex` and `pandas`.
 
@@ -204,6 +205,7 @@ az webapp config appsettings set -g reflex-rg -n reflex-demo-app --settings REFL
 ```
 
 If you later update the image, push a new tag and run:
+
 ```bash
 az webapp config container set -n reflex-demo-app -g reflex-rg \
     --docker-custom-image-name reflexacr123.azurecr.io/reflex-demo:latest
@@ -215,28 +217,34 @@ az webapp restart -n reflex-demo-app -g reflex-rg
 ```bash
 az webapp log tail -n reflex-demo-app -g reflex-rg
 ```
+
 For deeper tracing or Application Insights, enable:
+
 ```bash
 az monitor app-insights component create -g reflex-rg -l eastus -a reflex-ai
 az webapp config appsettings set -g reflex-rg -n reflex-demo-app --settings APPLICATIONINSIGHTS_CONNECTION_STRING="<conn-string>"
 ```
 
 ### Scaling
+
 Upgrade plan SKU or enable autoscale:
+
 ```bash
 az monitor autoscale create -g reflex-rg --resource reflex-plan --resource-type Microsoft.Web/serverfarms \
     -n reflex-autoscale --min-count 1 --max-count 3 --count 1
 ```
 
 ### Common Adjustments
+
 - Custom port: set `PORT` and add `--port $PORT` to startup command.
 - Environment: `REFLEX_ENV=prod` disables dev hot-reload.
 - Persistent storage: place user-upload directories in `/home/site/wwwroot/` if needed.
 
 ### Health Probes
+
 App Service expects your process to bind to the port quickly. Multi-stage Dockerfile reduces image size; if startup is slow, consider warming via an internal request.
 
 ### CI/CD Next Steps
+
 - Add GitHub Action to build & deploy (uses `az webapp deploy` or container build/push).
 - Cache dependencies with `actions/cache` keyed by `requirements.txt` hash.
-
